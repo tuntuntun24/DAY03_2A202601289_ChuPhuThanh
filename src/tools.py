@@ -218,32 +218,6 @@ def check_shipping_status(order_id: str) -> str:
 
 
 # =====================================================================
-# 🌤️ TOOL CŨ CỦA BOILERPLATE — giữ lại vì src/app.py (dòng 22) vẫn đang import.
-# Không đăng ký vào AVAILABLE_TOOLS nên Agent không gọi được. Sẽ dọn ở Bước 7.
-# =====================================================================
-def get_weather(location: str) -> str:
-    """(Cũ) Tra cứu thời tiết hiện tại của một thành phố."""
-    loc_lower = location.lower()
-    if "hà nội" in loc_lower or "ha noi" in loc_lower:
-        return "Thời tiết Hà Nội: 28°C, Nắng nhẹ, Độ ẩm 65%."
-    elif "hồ chí minh" in loc_lower or "tp.hcm" in loc_lower or "hcm" in loc_lower:
-        return "Thời tiết TP.HCM: 33°C, Nắng nóng, Có mây."
-    elif "đà nẵng" in loc_lower or "da nang" in loc_lower:
-        return "Thời tiết Đà Nẵng: 30°C, Gió nhẹ, Mát mẻ."
-    else:
-        return f"LỖI: Không tìm thấy dữ liệu thời tiết cho địa điểm '{location}'."
-
-
-def search_flights(origin: str, destination: str) -> str:
-    """(Cũ) Tra cứu chuyến bay giữa hai địa điểm."""
-    return (
-        f"Chuyến bay từ {origin} -> {destination} ngày mai:\n"
-        f"1. VN123 (08:00) - Giá: 1,500,000 VNĐ (Còn vé)\n"
-        f"2. VJ456 (14:30) - Giá: 1,200,000 VNĐ (Còn vé)"
-    )
-
-
-# =====================================================================
 # 📋 DANH BẠ TOOL — Agent chỉ gọi được những tool có tên ở đây
 # =====================================================================
 AVAILABLE_TOOLS = {
