@@ -229,6 +229,19 @@ AVAILABLE_TOOLS = {
 
 
 # =====================================================================
+# 🛡️ TIỀN ĐIỀU KIỆN — chặn đòn A3 (đi tắt, đoán ngành hàng)
+# =====================================================================
+# Muốn gọi tool bên trái thì trước đó phải gọi THÀNH CÔNG các tool bên phải.
+# Prompt đã dặn điều này, nhưng LLM không phải lúc nào cũng nghe, nên app.py kiểm tra bằng code.
+# Ví dụ: "Balo đựng Laptop" là ngành Thời trang (15 ngày), LLM đoán theo chữ "Laptop" thành
+# Điện tử (7 ngày) sẽ từ chối oan khách đã nhận hàng 10 ngày.
+TOOL_PRECONDITIONS = {
+    "check_return_policy": ["lookup_order"],
+    "create_return_ticket": ["lookup_order", "check_return_policy"],
+}
+
+
+# =====================================================================
 # 🧪 CHẠY THỬ:  python src/tools.py
 # =====================================================================
 if __name__ == "__main__":

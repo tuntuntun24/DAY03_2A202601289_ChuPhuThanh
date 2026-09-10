@@ -84,4 +84,8 @@ BẮT ĐẦU:
 # -> Final Answer = 4 vòng. Cộng 2 vòng dự phòng khi Agent gọi sai tool phải sửa = 6.
 # Đặt 3 là quá thấp: phiếu đã tạo ở vòng 3 nhưng hết lượt trước khi kịp báo khách.
 MAX_ITERATIONS = 6
+
+# 🛡️ Chặn đòn A2 (kẹt vòng lặp): một tool với CÙNG tham số chỉ được chạy tối đa 2 lần.
+# Lần 2 vẫn cho qua vì đôi khi gọi lại là hợp lý; từ lần 3 trở đi kết quả chắc chắn không đổi.
+MAX_REPEATED_ACTIONS = 2
 TIMEOUT_SECONDS = 10  # Timeout cho mỗi lần gọi tool

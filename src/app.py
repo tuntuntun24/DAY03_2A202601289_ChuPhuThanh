@@ -25,8 +25,13 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 # Import các thành phần từ file của Role 2, Role 3 & Multi-Provider Adapter
-from tools import AVAILABLE_TOOLS
-from prompts import CHATBOT_BASELINE_PROMPT, REACT_SYSTEM_PROMPT, MAX_ITERATIONS
+from tools import AVAILABLE_TOOLS, TOOL_PRECONDITIONS
+from prompts import (
+    CHATBOT_BASELINE_PROMPT,
+    REACT_SYSTEM_PROMPT,
+    MAX_ITERATIONS,
+    MAX_REPEATED_ACTIONS,
+)
 from providers import get_llm_provider
 
 load_dotenv()
@@ -132,30 +137,69 @@ def run_react_agent(user_query: str, provider):
 
     # Lịch sử hội thoại. LLM không có trí nhớ, nên mỗi vòng ta gửi lại TOÀN BỘ chuỗi này.
     history = f"Câu hỏi của khách hàng: {user_query}\n"
-    tools_used = []
+    tools_used = []           # tool LLM muốn gọi (kể cả lần bị chặn)
+    action_counts = {}        # 🛡️ A2: đếm số lần gọi mỗi cặp tool + tham số
+    succeeded_tools = set()   # 🛡️ A3: tool đã chạy THÀNH CÔNG (không trả "LỖI:")
+    ticket_created = False    # 🛡️ A4: đã có phiếu nào được tạo THÀNH CÔNG chưa
 
     for step in range(1, MAX_ITERATIONS + 1):
         print(f"\n--- 🔄 Vòng {step}/{MAX_ITERATIONS} ---")
 
         # 1. LLM đọc luật chơi + lịch sử, rồi viết bước tiếp theo
-        response = provider.generate(history, system_prompt=REACT_SYSTEM_PROMPT)
-        print(f"🧠 LLM trả lời:\n{response}")
+        raw_response = provider.generate(history, system_prompt=REACT_SYSTEM_PROMPT)
 
-        # 2. Có Final Answer -> xong việc
+        # 🛡️ A1 — CHỐNG BỊA OBSERVATION: Observation chỉ được đến từ tool thật.
+        # LLM tự viết "Observation:" thì cắt bỏ nó và MỌI THỨ phía sau (kể cả Final Answer bịa).
+        response = raw_response.split("Observation:")[0].strip()
+        print(f"🧠 LLM trả lời:\n{response}")
+        if response != raw_response.strip():
+            print("🛡️  [A1] LLM tự viết 'Observation:' — đã cắt bỏ phần bịa đặt phía sau.")
+
+        # 2. Có Final Answer -> kiểm tra rồi mới cho xong việc
         final_answer = extract_final_answer(response)
         if final_answer:
-            print(f"\n🏁 Final Answer: {final_answer}")
-            return {"answer": final_answer, "tools_used": tools_used}
-
-        # 3. Có Action -> chạy tool
-        action = parse_action(response)
-        if action:
-            tools_used.append(action["tool"])
-            print(f"🛠️  Gọi tool: {action['tool']}{action['args']}")
-            observation = execute_tool(action["tool"], action["args"])
+            # 🛡️ A4 — CHỐNG NÓI DỐI VỀ HÀNH ĐỘNG: chưa có phiếu THÀNH CÔNG thì không được nói "đã tạo phiếu".
+            if "đã tạo phiếu" in final_answer.lower() and not ticket_created:
+                observation = ("LỖI: Bạn nói 'đã tạo phiếu' nhưng chưa có lần create_return_ticket nào "
+                               "trả về THÀNH CÔNG. Không được nói dối về hành động. "
+                               "Hãy trả lời lại khách cho đúng sự thật.")
+                print("🛡️  [A4] Final Answer nói 'đã tạo phiếu' nhưng chưa có phiếu thật — không chấp nhận.")
+            else:
+                print(f"\n🏁 Final Answer: {final_answer}")
+                return {"answer": final_answer, "tools_used": tools_used}
         else:
-            observation = ("LỖI: Không đọc được Action hay Final Answer. Hãy viết đúng định dạng: "
-                           "Thought + Action: tên_tool['tham số'], hoặc Thought + Final Answer.")
+            # 3. Có Action -> kiểm tra rồi mới chạy tool
+            action = parse_action(response)
+            if action:
+                tool = action["tool"]
+                tools_used.append(tool)
+                print(f"🛠️  LLM muốn gọi: {tool}{action['args']}")
+
+                # 🛡️ A2 — CHỐNG KẸT VÒNG LẶP: đếm số lần gọi đúng tool này với đúng tham số này
+                signature = f"{tool}{action['args']}"
+                action_counts[signature] = action_counts.get(signature, 0) + 1
+
+                # 🛡️ A3 — CHỐNG ĐI TẮT: các tool bắt buộc phải gọi thành công trước đó
+                missing = [t for t in TOOL_PRECONDITIONS.get(tool, []) if t not in succeeded_tools]
+
+                if action_counts[signature] > MAX_REPEATED_ACTIONS:
+                    observation = (f"CẢNH BÁO: Bạn đã gọi {signature} {action_counts[signature]} lần với "
+                                   f"cùng tham số, kết quả sẽ không đổi. Hãy dùng các Observation đã có "
+                                   f"để trả lời bằng Final Answer.")
+                    print(f"🛡️  [A2] {signature} bị lặp lần {action_counts[signature]} — không chạy tool.")
+                elif missing:
+                    observation = (f"LỖI: phải gọi {', '.join(missing)} trước khi gọi {tool}. "
+                                   f"Không được đoán dữ liệu.")
+                    print(f"🛡️  [A3] Chưa gọi {', '.join(missing)} — không cho chạy {tool}.")
+                else:
+                    observation = execute_tool(tool, action["args"])
+                    if not observation.startswith("LỖI:"):
+                        succeeded_tools.add(tool)
+                    if tool == "create_return_ticket" and observation.startswith("THÀNH CÔNG"):
+                        ticket_created = True
+            else:
+                observation = ("LỖI: Không đọc được Action hay Final Answer. Hãy viết đúng định dạng: "
+                               "Thought + Action: tên_tool['tham số'], hoặc Thought + Final Answer.")
 
         print(f"👁️  Observation: {observation}")
 
