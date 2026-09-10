@@ -90,12 +90,14 @@ if __name__ == "__main__":
     
     tests = load_test_cases()
     print(f"✅ Đã tải thành công {len(tests)} Test Cases từ config/test_cases.json\n")
-    
-    # Chạy thử câu test số 3
-    sample_query = tests[2]["question"]
-    
-    print("--- DEMO 1: CHẠY TRÊN CHATBOT BASELINE ---")
-    run_baseline_chatbot(sample_query, provider)
-    
-    print("\n--- DEMO 2: CHẠY TRÊN REACT AGENT ---")
-    run_react_agent(sample_query, provider)
+
+    # Bước 5: cho Chatbot Baseline (không có tool) trả lời toàn bộ bộ đề
+    print("--- DEMO: CHATBOT BASELINE TRẢ LỜI TOÀN BỘ TEST CASE ---")
+    for case in tests:
+        print("\n" + "=" * 70)
+        print(f"🧪 TEST CASE #{case['id']} — {case['category']}")
+        print("=" * 70)
+        run_baseline_chatbot(case["question"], provider)
+
+    # ReAct Agent sẽ được lắp thật ở Bước 7, tạm thời chưa chạy
+    print("\n(ReAct Agent: chưa chạy — sẽ lắp ở Bước 7)")

@@ -4,9 +4,9 @@ Nơi cấu hình System Prompt và Phanh An Toàn (Guardrails) cho AI.
 """
 
 # Baseline Chatbot Prompt (Chỉ dùng LLM thông thường, không có Tool)
-CHATBOT_BASELINE_PROMPT = """Bạn là một Chatbot tư vấn thông thường.
-Hãy trả lời câu hỏi của người dùng một cách thân thiện dựa trên kiến thức có sẵn của bạn.
-Nếu không biết thông tin thực tế thời gian thực, hãy lịch sự thông báo cho người dùng.
+CHATBOT_BASELINE_PROMPT = """Bạn là trợ lý chăm sóc khách hàng của cửa hàng thương mại điện tử VinShop.
+Bạn hỗ trợ khách hàng các vấn đề về đơn hàng, vận chuyển và đổi trả sản phẩm.
+Hãy trả lời thân thiện, nhiệt tình, ngắn gọn và luôn cố gắng giúp khách hàng giải quyết vấn đề.
 """
 
 # ReAct Agent Prompt (Ép LLM suy luận theo chuỗi Thought -> Action)
